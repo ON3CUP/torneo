@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tabla de Posiciones - Torneo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 md:p-8">
+
+  <div class="max-w-4xl mx-auto">
+    <!-- Encabezado -->
+    <header class="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
+      <h1 class="text-2xl md:text-4xl font-extrabold text-indigo-400">🏆 Tabla de Posiciones</h1>
+      <a href="admin.html" class="text-xs md:text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg border border-gray-700 transition">Panel Admin</a>
+    </header>
+
+    <!-- Tabla -->
+    <div class="bg-gray-800 shadow-2xl rounded-xl overflow-hidden border border-gray-700">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-gray-700/50 text-gray-300 text-xs md:text-sm uppercase tracking-wider">
+              <th class="p-4 w-12 text-center">#</th>
+              <th class="p-4">Equipo</th>
+              <th class="p-4 text-center">PJ</th>
+              <th class="p-4 text-center">PG</th>
+              <th class="p-4 text-center">PP</th>
+              <th class="p-4 text-center text-indigo-400 font-bold">PTS</th>
+            </tr>
+          </thead>
+          <tbody id="tabla-body" class="divide-y divide-gray-700/60 text-sm md:text-base">
+            <tr>
+              <td colspan="6" class="p-6 text-center text-gray-400">Cargando datos del torneo...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { db } from './firebase-config.js';
+    import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const tbody = document.getElementById('tabla-body');
+
+    // Escuchar cambios en Firestore ordenados por Puntos (Descendente)
+    const q = query(collection(db, "equipos"), orderBy("puntos", "desc"));
+    
+    onSnapshot(q, (snapshot) => {
+      tbody.innerHTML = '';
+      if (snapshot.empty) {
+        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">No hay equipos registrados aún.</td></tr>`;
+        return;
+      }
+
+      let posicion = 1;
+      snapshot.forEach((doc) => {
+        const equipo = doc.data();
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-750/50 transition-colors';
+        
+        row.innerHTML = `
+          <td class="p-4 text-center font-bold ${posicion <= 3 ? 'text-yellow-400' : 'text-gray-400'}">${posicion}</td>
+          <td class="p-4 font-semibold text-white">${equipo.nombre}</td>
+          <td class="p-4 text-center text-gray-300">${equipo.pj || 0}</td>
+          <td class="p-4 text-center text-gray-300">${equipo.pg || 0}</td>
+          <td class="p-4 text-center text-gray-300">${equipo.pp || 0}</td>
+          <td class="p-4 text-center font-extrabold text-indigo-400 text-lg">${equipo.puntos}</td>
+        `;
+        tbody.appendChild(row);
+        posicion++;
+      });
+    });
+  </script>
+</body>
+</html>
