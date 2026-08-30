@@ -44,7 +44,7 @@
     const tbody = document.getElementById('tabla-body');
 
     // Escuchar cambios en Firestore ordenados por Tiempo (Ascendente)
-    const q = query(collection(db, "equipos"), orderBy("tiempo", "asc"));
+    const q = query(collection(db, "equipos"), orderBy("tiempo", "desc"));
     
     onSnapshot(q, (snapshot) => {
       tbody.innerHTML = '';
