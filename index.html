@@ -21,17 +21,15 @@
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-gray-700/50 text-gray-300 text-xs md:text-sm uppercase tracking-wider">
-              <th class="p-4 w-12 text-center">#</th>
-              <th class="p-4">Equipo</th>
-              <th class="p-4 text-center">PJ</th>
-              <th class="p-4 text-center">PG</th>
-              <th class="p-4 text-center">PP</th>
-              <th class="p-4 text-center text-indigo-400 font-bold">PTS</th>
+              <th class="p-4 w-12 text-center">Puesto</th>
+              <th class="p-4">Nombre</th>
+              <th class="p-4 text-center font-bold text-indigo-400">Tiempo</th>
+              <th class="p-4 text-center">Plataforma</th>
             </tr>
           </thead>
           <tbody id="tabla-body" class="divide-y divide-gray-700/60 text-sm md:text-base">
             <tr>
-              <td colspan="6" class="p-6 text-center text-gray-400">Cargando datos del torneo...</td>
+              <td colspan="4" class="p-6 text-center text-gray-400">Cargando datos del torneo...</td>
             </tr>
           </tbody>
         </table>
@@ -45,29 +43,27 @@
 
     const tbody = document.getElementById('tabla-body');
 
-    // Escuchar cambios en Firestore ordenados por Puntos (Descendente)
-    const q = query(collection(db, "equipos"), orderBy("puntos", "desc"));
+    // Escuchar cambios en Firestore ordenados por Tiempo (Ascendente)
+    const q = query(collection(db, "equipos"), orderBy("tiempo", "asc"));
     
     onSnapshot(q, (snapshot) => {
       tbody.innerHTML = '';
       if (snapshot.empty) {
-        tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">No hay equipos registrados aún.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-gray-400">No hay registros aún.</td></tr>`;
         return;
       }
 
       let posicion = 1;
       snapshot.forEach((doc) => {
-        const equipo = doc.data();
+        const jugador = doc.data();
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-750/50 transition-colors';
         
         row.innerHTML = `
           <td class="p-4 text-center font-bold ${posicion <= 3 ? 'text-yellow-400' : 'text-gray-400'}">${posicion}</td>
-          <td class="p-4 font-semibold text-white">${equipo.nombre}</td>
-          <td class="p-4 text-center text-gray-300">${equipo.pj || 0}</td>
-          <td class="p-4 text-center text-gray-300">${equipo.pg || 0}</td>
-          <td class="p-4 text-center text-gray-300">${equipo.pp || 0}</td>
-          <td class="p-4 text-center font-extrabold text-indigo-400 text-lg">${equipo.puntos}</td>
+          <td class="p-4 font-semibold text-white">${jugador.nombre}</td>
+          <td class="p-4 text-center font-extrabold text-indigo-400 text-lg">${jugador.tiempo || '00:00'}</td>
+          <td class="p-4 text-center text-gray-300">${jugador.plataforma || '-'}</td>
         `;
         tbody.appendChild(row);
         posicion++;
