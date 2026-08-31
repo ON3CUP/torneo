@@ -46,22 +46,21 @@
           <button id="sw-start-btn" class="bg-green-600 hover:bg-green-500 font-bold px-4 py-2 rounded-lg text-sm transition">Iniciar</button>
           <button id="sw-stop-btn" class="bg-yellow-600 hover:bg-yellow-500 font-bold px-4 py-2 rounded-lg text-sm transition">Parar</button>
           <button id="sw-reset-btn" class="bg-gray-700 hover:bg-gray-600 font-bold px-4 py-2 rounded-lg text-sm transition">Reiniciar</button>
-          <button id="sw-load-btn" class="bg-indigo-600 hover:bg-indigo-500 font-bold px-4 py-2 rounded-lg text-sm transition">Cargar Tiempo</button>
         </div>
       </div>
 
-      <!-- Agregar Participante -->
+      <!-- Agregar Participante Manualmente (Opcional por Admin) -->
       <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 shadow-lg">
-        <h2 class="text-lg font-bold mb-4 text-indigo-300">Registrar Participante</h2>
+        <h2 class="text-lg font-bold mb-4 text-indigo-300">Registrar Participante Manualmente</h2>
         <form id="add-team-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <input type="text" id="team-name" placeholder="Nombre" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
-          <input type="text" id="team-time" placeholder="Tiempo (ej: 01:23.456)" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
-          <input type="text" id="team-platform" placeholder="Plataforma (PC, PS5, Xbox)" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
+          <input type="text" id="team-twitch" placeholder="Twitch" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
+          <input type="text" id="team-gameid" placeholder="ID Juego" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
+          <input type="text" id="team-platform" placeholder="Plataforma" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
           <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 font-bold p-3 rounded-lg text-sm transition">Agregar</button>
         </form>
       </div>
 
-      <!-- Lista de Participantes -->
+      <!-- Lista de Participantes Inscriptos -->
       <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-lg">
         <h2 class="text-lg font-bold p-4 border-b border-gray-700 text-indigo-300">Lista de Participantes</h2>
         <div id="admin-equipos-list" class="divide-y divide-gray-700">
@@ -89,8 +88,6 @@
     const swStartBtn = document.getElementById('sw-start-btn');
     const swStopBtn = document.getElementById('sw-stop-btn');
     const swResetBtn = document.getElementById('sw-reset-btn');
-    const swLoadBtn = document.getElementById('sw-load-btn');
-    const teamTimeInput = document.getElementById('team-time');
 
     let startTime = 0;
     let elapsedTime = 0;
@@ -137,10 +134,6 @@
       stopwatchDisplay.textContent = "00:00.000";
     });
 
-    swLoadBtn.addEventListener('click', () => {
-      teamTimeInput.value = stopwatchDisplay.textContent;
-    });
-
     // Estado del usuario
     onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -166,18 +159,19 @@
     // Cerrar Sesión
     logoutBtn.addEventListener('click', () => signOut(auth));
 
-    // Agregar Participante
+    // Agregar Participante manual
     addTeamForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       await addDoc(collection(db, "equipos"), {
-        nombre: document.getElementById('team-name').value,
-        tiempo: document.getElementById('team-time').value,
-        plataforma: document.getElementById('team-platform').value
+        twitch: document.getElementById('team-twitch').value,
+        gameId: document.getElementById('team-gameid').value,
+        plataforma: document.getElementById('team-platform').value,
+        tiempo: ""
       });
       addTeamForm.reset();
     });
 
-    // Leer y actualizar lista
+    // Leer y actualizar lista en el admin
     function cargarEquiposAdmin() {
       onSnapshot(collection(db, "equipos"), (snapshot) => {
         adminEquiposList.innerHTML = '';
@@ -186,10 +180,14 @@
           const item = document.createElement('div');
           item.className = 'p-4 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-gray-750/50';
           item.innerHTML = `
-            <span class="font-bold text-lg w-full md:w-40 text-center md:text-left">${data.nombre}</span>
-            <div class="flex items-center gap-2">
-              <input type="text" value="${data.tiempo || ''}" id="time-${teamDoc.id}" placeholder="Tiempo" class="p-2 bg-gray-900 border border-gray-700 rounded text-sm text-center w-28">
-              <input type="text" value="${data.plataforma || ''}" id="plat-${teamDoc.id}" placeholder="Plataforma" class="p-2 bg-gray-900 border border-gray-700 rounded text-sm text-center w-28">
+            <div class="w-full md:w-48 text-center md:text-left">
+              <span class="font-bold text-indigo-300 block">@${data.twitch || '-'}</span>
+              <span class="text-xs text-gray-400">ID: ${data.gameId || data.nombre || '-'}</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 justify-center">
+              <input type="text" value="${data.tiempo || ''}" id="time-${teamDoc.id}" placeholder="00:00.000" class="p-2 bg-gray-900 border border-gray-700 rounded text-sm text-center w-28">
+              <button onclick="copiarTiempo('${teamDoc.id}')" class="bg-gray-700 hover:bg-gray-600 px-2 py-2 rounded text-xs transition" title="Copiar tiempo del cronómetro">⏱️ Cargar</button>
+              <input type="text" value="${data.plataforma || ''}" id="plat-${teamDoc.id}" placeholder="Plataforma" class="p-2 bg-gray-900 border border-gray-700 rounded text-sm text-center w-24">
               <button onclick="guardarCambios('${teamDoc.id}')" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded text-xs font-bold transition">Guardar</button>
             </div>
             <button onclick="eliminarEquipo('${teamDoc.id}')" class="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs transition">Eliminar</button>
@@ -199,7 +197,11 @@
       });
     }
 
-    // Funciones asociadas a los botones
+    // Funciones globales para botones dinámicos
+    window.copiarTiempo = (id) => {
+      document.getElementById(`time-${id}`).value = stopwatchDisplay.textContent;
+    };
+
     window.guardarCambios = async (id) => {
       const nuevoTiempo = document.getElementById(`time-${id}`).value;
       const nuevaPlataforma = document.getElementById(`plat-${id}`).value;
@@ -207,6 +209,7 @@
         tiempo: nuevoTiempo,
         plataforma: nuevaPlataforma
       });
+      alert("¡Registro actualizado!");
     };
 
     window.eliminarEquipo = async (id) => {
