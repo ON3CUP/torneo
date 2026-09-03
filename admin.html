@@ -149,24 +149,22 @@
       stopwatchDisplay.textContent = "00:00.000";
     });
 
-    // Cargar/Asignar tiempo al participante seleccionado o al input manual
+    // Cargar y guardar tiempo directamente al participante seleccionado
     swLoadBtn.addEventListener('click', async () => {
       const selectedId = swParticipantSelect.value;
       const timeValue = stopwatchDisplay.textContent;
 
       if (selectedId) {
-        // Asignar y guardar directamente en Firestore
         await updateDoc(doc(db, "equipos", selectedId), { 
           tiempo: timeValue 
         });
         alert(`¡Tiempo ${timeValue} asignado correctamente!`);
       } else {
-        // Si no seleccionó a nadie, cargarlo en el input del formulario manual
         teamTimeInput.value = timeValue;
       }
     });
 
-    // Estado de la sesión
+    // Sesión
     onAuthStateChanged(auth, (user) => {
       if (user) {
         loginSection.classList.add('hidden');
@@ -207,7 +205,6 @@
       onSnapshot(collection(db, "equipos"), (snapshot) => {
         adminEquiposList.innerHTML = '';
         
-        // Mantener la opción por defecto en el select
         const currentSelected = swParticipantSelect.value;
         swParticipantSelect.innerHTML = '<option value="">-- Selecciona a un participante --</option>';
 
@@ -220,14 +217,14 @@
           const data = teamDoc.data();
           const nombreMostrar = data.nombre || data.twitch || data.gameId || 'Sin Nombre';
 
-          // Poblar el Selector del Cronómetro
+          // Selector
           const option = document.createElement('option');
           option.value = teamDoc.id;
           option.textContent = `${nombreMostrar} (${data.plataforma || 'Sin plat.'}) ${data.tiempo ? '- ' + data.tiempo : ''}`;
           if (teamDoc.id === currentSelected) option.selected = true;
           swParticipantSelect.appendChild(option);
 
-          // Poblar la lista inferior
+          // Lista
           const item = document.createElement('div');
           item.className = 'p-4 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-gray-750/50';
           item.innerHTML = `
