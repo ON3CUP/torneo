@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Carga - Torneo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-4 md:p-8">
+
+  <div class="max-w-4xl mx-auto">
+    
+    <!-- Formulario de Login -->
+    <div id="login-section" class="max-w-md mx-auto bg-gray-800 p-6 rounded-xl border border-gray-700 mt-12 shadow-2xl">
+      <h2 class="text-2xl font-bold mb-4 text-center text-indigo-400">Acceso Administrador</h2>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Correo</label>
+          <input type="email" id="email" required class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1">Contraseña</label>
+          <input type="password" id="password" required class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-lg font-bold transition">Ingresar</button>
+      </form>
+    </div>
+
+    <!-- Panel Admin (Protegido) -->
+    <div id="admin-section" class="hidden">
+      <header class="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
+        <h1 class="text-2xl md:text-3xl font-extrabold text-indigo-400">⚙️ Carga de Datos</h1>
+        <div class="flex gap-2">
+          <a href="index.html" class="bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-lg border border-gray-700 text-sm">Ver Tabla</a>
+          <button id="logout-btn" class="bg-red-600/80 hover:bg-red-600 px-3 py-2 rounded-lg text-sm font-bold transition">Salir</button>
+        </div>
+      </header>
+
+      <!-- Cronómetro -->
+      <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 shadow-lg text-center">
+        <h2 class="text-lg font-bold mb-2 text-indigo-300">⏱️ Cronómetro</h2>
+        <div id="stopwatch-display" class="font-mono text-4xl md:text-5xl font-extrabold text-indigo-400 my-4 tracking-wider">
+          00:00.000
+        </div>
+        <div class="flex flex-wrap justify-center gap-3">
+          <button id="sw-start-btn" class="bg-green-600 hover:bg-green-500 font-bold px-4 py-2 rounded-lg text-sm transition">Iniciar</button>
+          <button id="sw-stop-btn" class="bg-yellow-600 hover:bg-yellow-500 font-bold px-4 py-2 rounded-lg text-sm transition">Parar</button>
+          <button id="sw-reset-btn" class="bg-gray-700 hover:bg-gray-600 font-bold px-4 py-2 rounded-lg text-sm transition">Reiniciar</button>
+          <button id="sw-load-btn" class="bg-indigo-600 hover:bg-indigo-500 font-bold px-4 py-2 rounded-lg text-sm transition">Cargar Tiempo</button>
+        </div>
+      </div>
+
+      <!-- Agregar Participante -->
+      <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 shadow-lg">
+        <h2 class="text-lg font-bold mb-4 text-indigo-300">Registrar Participante</h2>
+        <form id="add-team-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input type="text" id="team-name" placeholder="Nombre / Twitch" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
+          <input type="text" id="team-time" placeholder="Tiempo (ej: 01:23.456)" class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
+          <input type="text" id="team-platform" placeholder="Plataforma (PC, PS5, Xbox)" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
+          <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 font-bold p-3 rounded-lg text-sm transition">Agregar</button>
+        </form>
+      </div>
+
+      <!-- Lista de Participantes -->
+      <div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden shadow-lg">
+        <h2 class="text-lg font-bold p-4 border-b border-gray-700 text-indigo-300">Lista de Participantes</h2>
+        <div id="admin-equipos-list" class="divide-y divide-gray-700">
+          <p class="p-4 text-gray-400">Cargando lista...</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module">
+    import { db, auth } from './firebase-config.js';
+    import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const loginSection = document.getElementById('login-section');
+    const adminSection = document.getElementById('admin-section');
+    const loginForm = document.getElementById('login-form');
+    const logoutBtn = document.getElementById('logout-btn');
+    const addTeamForm = document.getElementById('add-team-form');
+    const adminEquiposList = document.getElementById('admin-equipos-list');
+
+    // Cronómetro
+    const stopwatchDisplay = document.getElementById('stopwatch-display');
+    const swStartBtn = document.getElementById('sw-start-btn');
+    const swStopBtn = document.getElementById('sw-stop-btn');
+    const swResetBtn = document.getElementById('sw-reset-btn');
+    const swLoadBtn = document.getElementById('sw-load-btn');
+    const teamTimeInput = document.getElementById('team-time');
+
+    let startTime = 0;
+    let elapsedTime = 0;
+    let timerInterval = null;
+
+    function formatTime(ms) {
+      const minutes = Math.floor(ms / 60000);
+      const seconds = Math.floor((ms % 60000) / 1000);
+      const milliseconds = ms % 1000;
+
+      const mStr = String(minutes).padStart(2, '0');
+      const sStr = String(seconds).padStart(2, '0');
+      const msStr = String(milliseconds).padStart(3, '0');
+
+      return `${mStr}:${sStr}.${msStr}`;
+    }
+
+    function updateDisplay() {
+      const currentTime = Date.now();
+      const timePassed = elapsedTime + (currentTime - startTime);
+      stopwatchDisplay.textContent = formatTime(timePassed);
+    }
+
+    swStartBtn.addEventListener('click', () => {
+      if (!timerInterval) {
+        startTime = Date.now();
+        timerInterval = setInterval(updateDisplay, 10);
+      }
+    });
+
+    swStopBtn.addEventListener('click', () => {
+      if (timerInterval) {
+        elapsedTime += Date.now() - startTime;
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    });
+
+    swResetBtn.addEventListener('click', () => {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      startTime = 0;
+      elapsedTime = 0;
+      stopwatchDisplay.textContent = "00:00.000";
+    });
+
+    swLoadBtn.addEventListener('click', () => {
+      teamTimeInput.value = stopwatchDisplay.textContent;
+    });
+
+    // Estado del usuario
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginSection.classList.add('hidden');
+        adminSection.classList.remove('hidden');
+        cargarEquiposAdmin();
+      } else {
+        loginSection.classList.remove('hidden');
+        adminSection.classList.add('hidden');
+      }
+    });
+
+    // Login
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await signInWithEmailAndPassword(auth, loginForm.email.value, loginForm.password.value);
+      } catch (err) {
+        alert("Error de acceso: Credenciales incorrectas");
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', () => signOut(auth));
+
+    // Agregar Participante manual
+    addTeamForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await addDoc(collection(db, "equipos"), {
+        nombre: document.getElementById('team-name').value,
+        tiempo: document.getElementById('team-time').value,
+        plataforma: document.getElementById('team-platform').value
+      });
+      addTeamForm.reset();
+    });
+
+    // Leer y actualizar lista
+    function cargarEquiposAdmin() {
+      onSnapshot(collection(db, "equipos"), (snapshot) => {
+        adminEquiposList.innerHTML = '';
+        if (snapshot.empty) {
+          adminEquiposList.innerHTML = '<p class="p-4 text-gray-400">No hay participantes registrados.</p>';
+          return;
+        }
+
+        snapshot.forEach((teamDoc) => {
+          const data = teamDoc.data();
+          const nombreMostrar = data.nombre || data.twitch || data.gameId || 'Sin Nombre';
+
+          const item = document.createElement('div');
+          item.className = 'p-4 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-gray-750/50';
+          item.innerHTML = `
+            <div class="w-full md:w-48 text-center md:text-left">
+              <span class="font-bold text-lg block">${nombreMostrar}</span>
+              ${data.gameId ? `<span class="text-xs text-gray-400 block">ID: ${data.gameId}</span>` : ''}
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" value="${data.tiempo || ''}" id="time-${teamDoc.id}" placeholder="00:00.000" class="p-2 bg-gray-900 border border-gray-700 rounded text-sm text-center w-28">
+              <input type="text" value="${data.plataforma || ''}" id="plat-${teamDoc.id}" placeholder="Plataforma" class="p-2 bg-gray-900 border border-gray-700 rounded text-sm text-center w-28">
+              <button onclick="guardarCambios('${teamDoc.id}')" class="bg-indigo-600 hover:bg-indigo-500 px-3 py-2 rounded text-xs font-bold transition">Guardar</button>
+            </div>
+            <button onclick="eliminarEquipo('${teamDoc.id}')" class="bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white px-3 py-1 rounded text-xs transition">Eliminar</button>
+          `;
+          adminEquiposList.appendChild(item);
+        });
+      });
+    }
+
+    window.guardarCambios = async (id) => {
+      const nuevoTiempo = document.getElementById(`time-${id}`).value;
+      const nuevaPlataforma = document.getElementById(`plat-${id}`).value;
+      await updateDoc(doc(db, "equipos", id), { 
+        tiempo: nuevoTiempo,
+        plataforma: nuevaPlataforma
+      });
+    };
+
+    window.eliminarEquipo = async (id) => {
+      if (confirm("¿Seguro que deseas eliminar este registro?")) {
+        await deleteDoc(doc(db, "equipos", id));
+      }
+    };
+  </script>
+</body>
+</html>
