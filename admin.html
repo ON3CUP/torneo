@@ -37,23 +37,33 @@
         </div>
       </header>
 
-      <!-- Cronómetro -->
+      <!-- Cronómetro + Selector de Participantes -->
       <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 shadow-lg text-center">
         <h2 class="text-lg font-bold mb-2 text-indigo-300">⏱️ Cronómetro</h2>
+        
+        <!-- Selector de Participante Inscrito -->
+        <div class="max-w-md mx-auto mb-4">
+          <label class="block text-xs text-gray-400 mb-1 text-left">Seleccionar Participante Inscrito:</label>
+          <select id="sw-participant-select" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm font-semibold">
+            <option value="">-- Selecciona a un participante --</option>
+          </select>
+        </div>
+
         <div id="stopwatch-display" class="font-mono text-4xl md:text-5xl font-extrabold text-indigo-400 my-4 tracking-wider">
           00:00.000
         </div>
+
         <div class="flex flex-wrap justify-center gap-3">
           <button id="sw-start-btn" class="bg-green-600 hover:bg-green-500 font-bold px-4 py-2 rounded-lg text-sm transition">Iniciar</button>
           <button id="sw-stop-btn" class="bg-yellow-600 hover:bg-yellow-500 font-bold px-4 py-2 rounded-lg text-sm transition">Parar</button>
           <button id="sw-reset-btn" class="bg-gray-700 hover:bg-gray-600 font-bold px-4 py-2 rounded-lg text-sm transition">Reiniciar</button>
-          <button id="sw-load-btn" class="bg-indigo-600 hover:bg-indigo-500 font-bold px-4 py-2 rounded-lg text-sm transition">Cargar Tiempo</button>
+          <button id="sw-load-btn" class="bg-indigo-600 hover:bg-indigo-500 font-bold px-4 py-2 rounded-lg text-sm transition">Asignar Tiempo</button>
         </div>
       </div>
 
-      <!-- Agregar Participante -->
+      <!-- Agregar Participante Manual -->
       <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 mb-8 shadow-lg">
-        <h2 class="text-lg font-bold mb-4 text-indigo-300">Registrar Participante</h2>
+        <h2 class="text-lg font-bold mb-4 text-indigo-300">Registrar Participante Manualmente</h2>
         <form id="add-team-form" class="grid grid-cols-1 md:grid-cols-4 gap-3">
           <input type="text" id="team-name" placeholder="Nombre / Twitch" required class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
           <input type="text" id="team-time" placeholder="Tiempo (ej: 01:23.456)" class="p-3 bg-gray-900 border border-gray-700 rounded-lg text-sm">
@@ -85,12 +95,13 @@
     const addTeamForm = document.getElementById('add-team-form');
     const adminEquiposList = document.getElementById('admin-equipos-list');
 
-    // Cronómetro
+    // Cronómetro y Selector
     const stopwatchDisplay = document.getElementById('stopwatch-display');
     const swStartBtn = document.getElementById('sw-start-btn');
     const swStopBtn = document.getElementById('sw-stop-btn');
     const swResetBtn = document.getElementById('sw-reset-btn');
     const swLoadBtn = document.getElementById('sw-load-btn');
+    const swParticipantSelect = document.getElementById('sw-participant-select');
     const teamTimeInput = document.getElementById('team-time');
 
     let startTime = 0;
@@ -138,11 +149,24 @@
       stopwatchDisplay.textContent = "00:00.000";
     });
 
-    swLoadBtn.addEventListener('click', () => {
-      teamTimeInput.value = stopwatchDisplay.textContent;
+    // Cargar/Asignar tiempo al participante seleccionado o al input manual
+    swLoadBtn.addEventListener('click', async () => {
+      const selectedId = swParticipantSelect.value;
+      const timeValue = stopwatchDisplay.textContent;
+
+      if (selectedId) {
+        // Asignar y guardar directamente en Firestore
+        await updateDoc(doc(db, "equipos", selectedId), { 
+          tiempo: timeValue 
+        });
+        alert(`¡Tiempo ${timeValue} asignado correctamente!`);
+      } else {
+        // Si no seleccionó a nadie, cargarlo en el input del formulario manual
+        teamTimeInput.value = timeValue;
+      }
     });
 
-    // Estado del usuario
+    // Estado de la sesión
     onAuthStateChanged(auth, (user) => {
       if (user) {
         loginSection.classList.add('hidden');
@@ -167,7 +191,7 @@
     // Logout
     logoutBtn.addEventListener('click', () => signOut(auth));
 
-    // Agregar Participante
+    // Registro manual
     addTeamForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       await addDoc(collection(db, "equipos"), {
@@ -178,10 +202,15 @@
       addTeamForm.reset();
     });
 
-    // Leer y actualizar lista
+    // Leer y actualizar lista de participantes y el selector
     function cargarEquiposAdmin() {
       onSnapshot(collection(db, "equipos"), (snapshot) => {
         adminEquiposList.innerHTML = '';
+        
+        // Mantener la opción por defecto en el select
+        const currentSelected = swParticipantSelect.value;
+        swParticipantSelect.innerHTML = '<option value="">-- Selecciona a un participante --</option>';
+
         if (snapshot.empty) {
           adminEquiposList.innerHTML = '<p class="p-4 text-gray-400">No hay participantes registrados.</p>';
           return;
@@ -191,6 +220,14 @@
           const data = teamDoc.data();
           const nombreMostrar = data.nombre || data.twitch || data.gameId || 'Sin Nombre';
 
+          // Poblar el Selector del Cronómetro
+          const option = document.createElement('option');
+          option.value = teamDoc.id;
+          option.textContent = `${nombreMostrar} (${data.plataforma || 'Sin plat.'}) ${data.tiempo ? '- ' + data.tiempo : ''}`;
+          if (teamDoc.id === currentSelected) option.selected = true;
+          swParticipantSelect.appendChild(option);
+
+          // Poblar la lista inferior
           const item = document.createElement('div');
           item.className = 'p-4 flex flex-col md:flex-row justify-between items-center gap-4 hover:bg-gray-750/50';
           item.innerHTML = `
