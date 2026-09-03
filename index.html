@@ -55,13 +55,13 @@
         return;
       }
 
-      // Extraer y procesar participantes
+      // Extraer participantes
       const equipos = [];
       snapshot.forEach((doc) => {
         equipos.push({ id: doc.id, ...doc.data() });
       });
 
-      // Ordenar: Los que tienen tiempo van arriba (menor tiempo primero), los sin tiempo van al final
+      // Orden descendente: Mayor tiempo primero. Los sin tiempo van al final.
       equipos.sort((a, b) => {
         const timeA = a.tiempo ? a.tiempo.trim() : "";
         const timeB = b.tiempo ? b.tiempo.trim() : "";
@@ -70,7 +70,7 @@
         if (!timeA && timeB) return 1;
         if (!timeA && !timeB) return 0;
 
-        return timeA.localeCompare(timeB);
+        return timeB.localeCompare(timeA); // Invertido a B vs A para orden descendente
       });
 
       // Renderizar tabla
