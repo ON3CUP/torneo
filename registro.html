@@ -3,91 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inscripción al Torneo</title>
+  <title>Inscripción - Torneo</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen p-4 md:p-8 flex items-center justify-center">
+<body class="bg-gray-900 text-white min-h-screen p-4 md:p-8">
 
-  <div class="max-w-md w-full bg-gray-800 p-6 md:p-8 rounded-xl border border-gray-700 shadow-2xl">
-    <h1 class="text-2xl font-extrabold text-center text-indigo-400 mb-2">🎮 Inscripción al Torneo</h1>
-    <p class="text-xs text-gray-400 text-center mb-6">Completa tus datos para registrarte en el torneo.</p>
+  <div class="max-w-md mx-auto mt-8">
+    <!-- Encabezado -->
+    <header class="flex justify-between items-center mb-8 border-b border-gray-700 pb-4">
+      <h1 class="text-2xl font-extrabold text-indigo-400">🎮 Inscripción al Torneo</h1>
+      <a href="index.html" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg border border-gray-700 transition">🏆 Ver Tabla</a>
+    </header>
 
-    <form id="register-form" class="space-y-4">
-      <div>
-        <label class="block text-xs font-bold text-gray-300 mb-1">Nombre de Twitch</label>
-        <input type="text" id="twitch-user" placeholder="Ej: tu_usuario" required class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
-      </div>
+    <!-- Formulario de Registro -->
+    <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 shadow-2xl">
+      <form id="registro-form" class="space-y-4">
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 font-semibold">Nombre / Nick *</label>
+          <input type="text" id="nombre" required placeholder="Tu nombre o Nick" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+        </div>
 
-      <div>
-        <label class="block text-xs font-bold text-gray-300 mb-1">ID del Juego</label>
-        <input type="text" id="game-id" placeholder="Ej: Player#1234" required class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
-      </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 font-semibold">Canal de Twitch (opcional)</label>
+          <input type="text" id="twitch" placeholder="ej. tu_usuario" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+        </div>
 
-      <div>
-        <label class="block text-xs font-bold text-gray-300 mb-1">Plataforma</label>
-        <select id="platform" required class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
-          <option value="" disabled selected>Selecciona tu plataforma</option>
-          <option value="PC">PC</option>
-          <option value="PS5">PlayStation 5</option>
-          <option value="PS4">PlayStation 4</option>
-          <option value="Xbox Series">Xbox Series X/S</option>
-          <option value="Xbox One">Xbox One</option>
-          <option value="Nintendo Switch">Nintendo Switch</option>
-        </select>
-      </div>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 font-semibold">ID de Juego *</label>
+          <input type="text" id="gameId" required placeholder="Tu ID / GamerTag" class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+        </div>
 
-      <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-lg font-bold transition mt-2">
-        Anotarse al Torneo
-      </button>
-    </form>
+        <div>
+          <label class="block text-xs text-gray-400 mb-1 font-semibold">Plataforma *</label>
+          <select id="plataforma" required class="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-indigo-500 text-sm">
+            <option value="">-- Selecciona plataforma --</option>
+            <option value="PC">PC</option>
+            <option value="PS5">PS5</option>
+            <option value="PS4">PS4</option>
+            <option value="Xbox">Xbox</option>
+            <option value="Switch">Switch</option>
+          </select>
+        </div>
 
-    <div id="status-message" class="hidden mt-4 p-3 rounded-lg text-center text-sm font-bold"></div>
+        <button type="submit" id="btn-submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white p-3 rounded-lg font-bold transition shadow-lg mt-6">
+          Registrarme
+        </button>
+      </form>
 
-    <div class="mt-6 text-center border-t border-gray-700 pt-4">
-      <a href="index.html" class="text-xs text-indigo-400 hover:underline">← Ver Lista de Participantes</a>
+      <div id="mensaje" class="hidden mt-4 p-3 rounded-lg text-center font-bold text-sm"></div>
     </div>
   </div>
 
   <script type="module">
     import { db } from './firebase-config.js';
-    import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-    const registerForm = document.getElementById('register-form');
-    const submitBtn = document.getElementById('submit-btn');
-    const statusMessage = document.getElementById('status-message');
+    const registroForm = document.getElementById('registro-form');
+    const mensaje = document.getElementById('mensaje');
+    const btnSubmit = document.getElementById('btn-submit');
 
-    registerForm.addEventListener('submit', async (e) => {
+    registroForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Registrando...";
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = 'Registrando...';
 
-      const twitch = document.getElementById('twitch-user').value.trim();
-      const gameId = document.getElementById('game-id').value.trim();
-      const platform = document.getElementById('platform').value;
+      const nombre = document.getElementById('nombre').value.trim();
+      const twitch = document.getElementById('twitch').value.trim();
+      const gameId = document.getElementById('gameId').value.trim();
+      const plataforma = document.getElementById('plataforma').value;
 
       try {
         await addDoc(collection(db, "equipos"), {
+          nombre: nombre,
           twitch: twitch,
           gameId: gameId,
-          plataforma: platform,
-          tiempo: "", // Inicialmente vacío
-          registradoEn: serverTimestamp()
+          plataforma: plataforma,
+          tiempo: "" // Se inicializa vacío para ser asignado en el panel de admin
         });
 
-        statusMessage.className = "mt-4 p-3 rounded-lg text-center text-sm font-bold bg-green-500/20 text-green-400 border border-green-500/30";
-        statusMessage.textContent = "¡Te has inscripto con éxito! 🎉";
-        statusMessage.classList.remove('hidden');
+        mensaje.className = 'mt-4 p-3 rounded-lg text-center font-bold text-sm bg-green-900/60 text-green-300 border border-green-700';
+        mensaje.textContent = '¡Inscripción realizada con éxito! Redirigiendo a la tabla...';
+        mensaje.classList.remove('hidden');
 
-        registerForm.reset();
+        registroForm.reset();
+
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 2000);
+
       } catch (error) {
         console.error("Error al registrar: ", error);
-        statusMessage.className = "mt-4 p-3 rounded-lg text-center text-sm font-bold bg-red-500/20 text-red-400 border border-red-500/30";
-        statusMessage.textContent = "Hubo un error al guardar tu inscripción. Inténtalo de nuevo.";
-        statusMessage.classList.remove('hidden');
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Anotarse al Torneo";
+        mensaje.className = 'mt-4 p-3 rounded-lg text-center font-bold text-sm bg-red-900/60 text-red-300 border border-red-700';
+        mensaje.textContent = 'Ocurrió un error al guardar los datos. Intenta nuevamente.';
+        mensaje.classList.remove('hidden');
+
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Registrarme';
       }
     });
   </script>
